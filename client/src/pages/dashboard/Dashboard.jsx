@@ -17,8 +17,12 @@ import {
   XCircle,
   AlertCircle,
   ChefHat,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { dashboardApi } from '../../api/dashboard.api';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   AreaChart,
   Area,
@@ -31,90 +35,57 @@ import {
   Bar,
 } from 'recharts';
 
-// Mock data for charts
-const scansData = [
-  { name: 'Jan 1', scans: 45 },
-  { name: 'Jan 5', scans: 52 },
-  { name: 'Jan 10', scans: 78 },
-  { name: 'Jan 15', scans: 95 },
-  { name: 'Jan 20', scans: 120 },
-  { name: 'Jan 25', scans: 88 },
-  { name: 'Jan 30', scans: 145 },
-];
-
-const weeklyOrdersData = [
-  { name: 'Mon', orders: 24 },
-  { name: 'Tue', orders: 35 },
-  { name: 'Wed', orders: 28 },
-  { name: 'Thu', orders: 42 },
-  { name: 'Fri', orders: 58 },
-  { name: 'Sat', orders: 65 },
-  { name: 'Sun', orders: 48 },
-];
-
-// Mock recent orders
-const recentOrders = [
-  {
-    id: 'ORD-001',
-    table: 'Table 5',
-    items: 3,
-    total: 45.99,
-    status: 'completed',
-    time: '10 min ago',
-  },
-  {
-    id: 'ORD-002',
-    table: 'Table 12',
-    items: 5,
-    total: 78.50,
-    status: 'preparing',
-    time: '15 min ago',
-  },
-  {
-    id: 'ORD-003',
-    table: 'Table 3',
-    items: 2,
-    total: 25.00,
-    status: 'pending',
-    time: '20 min ago',
-  },
-  {
-    id: 'ORD-004',
-    table: 'Table 8',
-    items: 4,
-    total: 62.75,
-    status: 'completed',
-    time: '35 min ago',
-  },
-  {
-    id: 'ORD-005',
-    table: 'Table 1',
-    items: 1,
-    total: 15.99,
-    status: 'cancelled',
-    time: '1 hour ago',
-  },
-];
-
-// Mock popular items
-const popularItems = [
-  { name: 'Margherita Pizza', orders: 145, revenue: 1740 },
-  { name: 'Pasta Carbonara', orders: 120, revenue: 1680 },
-  { name: 'Caesar Salad', orders: 98, revenue: 882 },
-  { name: 'Tiramisu', orders: 85, revenue: 595 },
-];
+dayjs.extend(relativeTime);
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState('week');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Dashboard data state
+  const [stats, setStats] = useState(null);
+  const [ordersChartData, setOrdersChartData] = useState([]);
+  const [scansChartData, setScansChartData] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [popularItems, setPopularItems] = useState([]);
+  const [totalWeeklyOrders, setTotalWeeklyOrders] = useState(0);
+
+  // Fetch all dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [statsRes, ordersChartRes, scansChartRes, recentOrdersRes, popularItemsRes] = await Promise.all([
+          dashboardApi.getStats(),
+          dashboardApi.getOrdersChart(timeRange),
+          dashboardApi.getScansChart('month'),
+          dashboardApi.getRecentOrders(),
+          dashboardApi.getPopularItems(),
+        ]);
+
+        setStats(statsRes.data);
+        setOrdersChartData(ordersChartRes.data.chartData || []);
+        setTotalWeeklyOrders(ordersChartRes.data.totalOrders || 0);
+        setScansChartData(scansChartRes.data.chartData || []);
+        setRecentOrders(recentOrdersRes.data || []);
+        setPopularItems(popularItemsRes.data || []);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [timeRange]);
 
   // Stats cards data
-  const stats = [
+  const statsCards = [
     {
       title: 'Total Restaurants',
-      value: user?.stats?.totalRestaurants || 2,
-      change: '+1 this month',
-      changeType: 'positive',
+      value: stats?.totalRestaurants || 0,
+      change: stats?.totalRestaurants > 0 ? `${stats.totalRestaurants} active` : 'Add your first',
+      changeType: stats?.totalRestaurants > 0 ? 'positive' : 'neutral',
       icon: Store,
       color: 'sky',
       link: '/dashboard/restaurants',
@@ -130,8 +101,8 @@ const Dashboard = () => {
     },
     {
       title: 'Total Scans',
-      value: '2,847',
-      change: '+12.5% vs last month',
+      value: stats?.totalScans?.toLocaleString() || '0',
+      change: 'QR menu views',
       changeType: 'positive',
       icon: QrCode,
       color: 'emerald',
@@ -139,9 +110,9 @@ const Dashboard = () => {
     },
     {
       title: 'Total Orders',
-      value: '1,234',
-      change: '+8.2% vs last month',
-      changeType: 'positive',
+      value: stats?.totalOrders?.toLocaleString() || '0',
+      change: stats?.orderChange ? `${stats.orderChange > 0 ? '+' : ''}${stats.orderChange}% vs last month` : 'This month',
+      changeType: stats?.orderChange >= 0 ? 'positive' : 'negative',
       icon: ShoppingBag,
       color: 'violet',
       link: '/dashboard/orders',
@@ -173,6 +144,18 @@ const Dashboard = () => {
     return styles[status] || 'bg-gray-100 text-gray-700';
   };
 
+  const formatTime = (date) => {
+    return dayjs(date).fromNow();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -196,7 +179,7 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {stats.map((stat, index) => {
+        {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           const colorClasses = {
             sky: 'bg-sky-100 text-sky-600',
@@ -233,13 +216,12 @@ const Dashboard = () => {
                       <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
                     )}
                     <span
-                      className={`text-sm ${
-                        stat.changeType === 'positive'
+                      className={`text-sm ${stat.changeType === 'positive'
                           ? 'text-emerald-600'
                           : stat.changeType === 'negative'
-                          ? 'text-red-600'
-                          : 'text-gray-500'
-                      }`}
+                            ? 'text-red-600'
+                            : 'text-gray-500'
+                        }`}
                     >
                       {stat.change}
                     </span>
@@ -265,55 +247,56 @@ const Dashboard = () => {
               <h3 className="text-lg font-semibold text-gray-900">QR Code Scans</h3>
               <p className="text-sm text-gray-500">This month&apos;s scan activity</p>
             </div>
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="px-3 py-2 bg-gray-100 border-0 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="year">This Year</option>
-            </select>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-gray-900">{stats?.totalScans || 0}</p>
+              <p className="text-xs text-gray-500">total scans</p>
+            </div>
           </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={scansData}>
-                <defs>
-                  <linearGradient id="colorScans" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: 'none',
-                    borderRadius: '12px',
-                    color: '#fff',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="scans"
-                  stroke="#0ea5e9"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorScans)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {scansChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={scansChartData}>
+                  <defs>
+                    <linearGradient id="colorScans" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 12 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 12 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: '#fff',
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="scans"
+                    stroke="#0ea5e9"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorScans)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <p>No scan data available</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -331,39 +314,45 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center space-x-2 text-sm">
               <span className="text-gray-500">Total:</span>
-              <span className="font-semibold text-gray-900">300 orders</span>
+              <span className="font-semibold text-gray-900">{totalWeeklyOrders} orders</span>
             </div>
           </div>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyOrdersData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: 'none',
-                    borderRadius: '12px',
-                    color: '#fff',
-                  }}
-                />
-                <Bar
-                  dataKey="orders"
-                  fill="#10b981"
-                  radius={[8, 8, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {ordersChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ordersChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 12 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 12 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: '#fff',
+                    }}
+                  />
+                  <Bar
+                    dataKey="orders"
+                    fill="#10b981"
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <p>No order data available</p>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
@@ -391,46 +380,54 @@ const Dashboard = () => {
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                  <th className="px-6 py-4 font-medium">Order ID</th>
-                  <th className="px-6 py-4 font-medium">Table</th>
-                  <th className="px-6 py-4 font-medium">Items</th>
-                  <th className="px-6 py-4 font-medium">Total</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order) => (
-                  <tr
-                    key={order.id}
-                    className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <span className="font-medium text-gray-900">{order.id}</span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{order.table}</td>
-                    <td className="px-6 py-4 text-gray-600">{order.items} items</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">
-                      ${order.total.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBadge(
-                          order.status
-                        )}`}
-                      >
-                        {getStatusIcon(order.status)}
-                        <span className="capitalize">{order.status}</span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 text-sm">{order.time}</td>
+            {recentOrders.length > 0 ? (
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
+                    <th className="px-6 py-4 font-medium">Order ID</th>
+                    <th className="px-6 py-4 font-medium">Table</th>
+                    <th className="px-6 py-4 font-medium">Items</th>
+                    <th className="px-6 py-4 font-medium">Total</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="px-6 py-4 font-medium">Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentOrders.slice(0, 5).map((order) => (
+                    <tr
+                      key={order.id}
+                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <span className="font-medium text-gray-900">{order.id}</span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">{order.table}</td>
+                      <td className="px-6 py-4 text-gray-600">{order.items} items</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">
+                        ₹{order.total?.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBadge(
+                            order.status
+                          )}`}
+                        >
+                          {getStatusIcon(order.status)}
+                          <span className="capitalize">{order.status}</span>
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 text-sm">{formatTime(order.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="p-8 text-center text-gray-400">
+                <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>No orders yet</p>
+                <p className="text-sm">Orders will appear here once customers start placing them</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -448,26 +445,33 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="p-6 space-y-4">
-            {popularItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg flex items-center justify-center">
-                    <ChefHat className="w-5 h-5 text-amber-600" />
+            {popularItems.length > 0 ? (
+              popularItems.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 rounded-lg flex items-center justify-center">
+                      <ChefHat className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{item.name}</p>
+                      <p className="text-sm text-gray-500">{item.orders} orders</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{item.name}</p>
-                    <p className="text-sm text-gray-500">{item.orders} orders</p>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">₹{item.revenue}</p>
+                    <p className="text-xs text-gray-500">revenue</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900">${item.revenue}</p>
-                  <p className="text-xs text-gray-500">revenue</p>
-                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-400 py-4">
+                <ChefHat className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No popular items yet</p>
               </div>
-            ))}
+            )}
           </div>
         </motion.div>
       </div>

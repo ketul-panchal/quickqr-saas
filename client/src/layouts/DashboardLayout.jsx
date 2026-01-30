@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import GlobalSearch from '../components/GlobalSearch';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   QrCode,
   LayoutDashboard,
@@ -22,7 +26,21 @@ import {
   Receipt,
   Users,
   ChevronRight,
+  Check,
 } from 'lucide-react';
+
+dayjs.extend(relativeTime);
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Helper to get full image URL
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  return `${API_BASE_URL}${imagePath}`;
+};
 
 const sidebarLinks = [
   {
@@ -36,8 +54,8 @@ const sidebarLinks = [
     links: [
       { name: 'My Restaurants', path: '/dashboard/restaurants', icon: Store },
       { name: 'Add Restaurant', path: '/dashboard/restaurants/new', icon: Plus },
-    //   { name: 'Orders', path: '/dashboard/orders', icon: ShoppingBag },
-    //   { name: 'QR Codes', path: '/dashboard/qr-codes', icon: QrCode },
+      { name: 'Orders', path: '/dashboard/orders', icon: ShoppingBag },
+      //   { name: 'QR Codes', path: '/dashboard/qr-codes', icon: QrCode },
     ],
   },
   {
@@ -52,6 +70,7 @@ const sidebarLinks = [
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -75,12 +94,22 @@ const DashboardLayout = () => {
     return 'Dashboard';
   };
 
-  // Mock notifications
-  const notifications = [
-    { id: 1, title: 'New order received', message: 'Table 5 placed an order', time: '5 min ago', unread: true },
-    { id: 2, title: 'Menu updated', message: 'Pizza menu was updated successfully', time: '1 hour ago', unread: true },
-    { id: 3, title: 'New review', message: 'You received a 5-star review', time: '2 hours ago', unread: false },
-  ];
+  // Handle notification click
+  const handleNotificationClick = (notification) => {
+    if (!notification.isRead) {
+      markAsRead(notification._id || notification.id);
+    }
+    // Navigate to order if it's an order notification
+    if (notification.data?.orderId && notification.data?.restaurantId) {
+      navigate(`/dashboard/restaurants/${notification.data.restaurantId}/orders`);
+      setNotificationsOpen(false);
+    }
+  };
+
+  // Format notification time
+  const formatTime = (date) => {
+    return dayjs(date).fromNow();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,9 +128,8 @@ const DashboardLayout = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
@@ -130,17 +158,16 @@ const DashboardLayout = () => {
                 {section.links.map((link) => {
                   const Icon = link.icon;
                   const isActive = location.pathname === link.path;
-                  
+
                   return (
                     <li key={link.path}>
                       <NavLink
                         to={link.path}
                         onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                          isActive
-                            ? 'bg-sky-50 text-sky-600'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
+                        className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${isActive
+                          ? 'bg-sky-50 text-sky-600'
+                          : 'text-gray-600 hover:bg-gray-100'
+                          }`}
                       >
                         <Icon className={`w-5 h-5 ${isActive ? 'text-sky-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
                         <span className="font-medium">{link.name}</span>
@@ -181,8 +208,16 @@ const DashboardLayout = () => {
         {/* User Profile */}
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-semibold">
-              {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+            <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
+              {user?.avatar ? (
+                <img
+                  src={getImageUrl(user.avatar)}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <>{user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}</>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
@@ -207,7 +242,7 @@ const DashboardLayout = () => {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              
+
               {/* Breadcrumb */}
               <div className="hidden sm:flex items-center space-x-2 text-sm">
                 <span className="text-gray-400">Dashboard</span>
@@ -220,14 +255,7 @@ const DashboardLayout = () => {
             <div className="flex items-center space-x-3">
               {/* Search */}
               <div className="hidden md:flex items-center">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-64 pl-10 pr-4 py-2 bg-gray-100 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
+                <GlobalSearch />
               </div>
 
               {/* Notifications */}
@@ -237,7 +265,11 @@ const DashboardLayout = () => {
                   className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
                 >
                   <Bell className="w-6 h-6" />
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-white">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                    </span>
+                  )}
                 </button>
 
                 {/* Notifications Dropdown */}
@@ -247,35 +279,53 @@ const DashboardLayout = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden"
+                      className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50"
                     >
-                      <div className="px-4 py-3 border-b border-gray-100">
+                      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                         <h3 className="font-semibold text-gray-900">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-xs text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1"
+                          >
+                            <Check className="w-3 h-3" />
+                            Mark all read
+                          </button>
+                        )}
                       </div>
                       <div className="max-h-72 overflow-y-auto">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${
-                              notification.unread ? 'bg-sky-50/50' : ''
-                            }`}
-                          >
-                            <div className="flex items-start space-x-3">
-                              <div className={`w-2 h-2 mt-2 rounded-full ${notification.unread ? 'bg-sky-500' : 'bg-gray-300'}`} />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                                <p className="text-sm text-gray-500">{notification.message}</p>
-                                <p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-gray-500">
+                            <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                            <p className="text-sm">No notifications yet</p>
+                          </div>
+                        ) : (
+                          notifications.slice(0, 10).map((notification) => (
+                            <div
+                              key={notification._id || notification.id}
+                              onClick={() => handleNotificationClick(notification)}
+                              className={`px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors ${!notification.isRead ? 'bg-sky-50/50' : ''
+                                }`}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${!notification.isRead ? 'bg-sky-500' : 'bg-gray-300'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{notification.title}</p>
+                                  <p className="text-sm text-gray-500 truncate">{notification.message}</p>
+                                  <p className="text-xs text-gray-400 mt-1">{formatTime(notification.createdAt)}</p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
-                      <div className="px-4 py-3 border-t border-gray-100">
-                        <button className="text-sm text-sky-600 font-medium hover:text-sky-700">
-                          View all notifications
-                        </button>
-                      </div>
+                      {notifications.length > 0 && (
+                        <div className="px-4 py-3 border-t border-gray-100">
+                          <button className="text-sm text-sky-600 font-medium hover:text-sky-700">
+                            View all notifications
+                          </button>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -287,8 +337,16 @@ const DashboardLayout = () => {
                   onClick={() => setProfileDropdown(!profileDropdown)}
                   className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-xl transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-emerald-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                    {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                  <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-emerald-500 rounded-full flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+                    {user?.avatar ? (
+                      <img
+                        src={getImageUrl(user.avatar)}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <>{user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}</>
+                    )}
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-500" />
                 </button>

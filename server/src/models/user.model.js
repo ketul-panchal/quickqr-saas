@@ -40,6 +40,52 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true, // Allow null values while maintaining uniqueness
+      trim: true,
+      minlength: [3, 'Username must be at least 3 characters'],
+      maxlength: [30, 'Username cannot exceed 30 characters'],
+      match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'],
+    },
+    billing: {
+      type: {
+        type: String,
+        enum: ['personal', 'business'],
+        default: 'personal',
+      },
+      name: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Billing name cannot exceed 100 characters'],
+      },
+      address: {
+        type: String,
+        trim: true,
+        maxlength: [200, 'Address cannot exceed 200 characters'],
+      },
+      city: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'City cannot exceed 100 characters'],
+      },
+      state: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'State cannot exceed 100 characters'],
+      },
+      postalCode: {
+        type: String,
+        trim: true,
+        maxlength: [20, 'Postal code cannot exceed 20 characters'],
+      },
+      country: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Country cannot exceed 100 characters'],
+      },
+    },
     role: {
       type: String,
       enum: ['user', 'admin', 'super_admin'],
@@ -111,6 +157,7 @@ userSchema.virtual('fullName').get(function () {
 
 // Index for better query performance
 userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
 userSchema.index({ createdAt: -1 });
 
 // Hash password before saving

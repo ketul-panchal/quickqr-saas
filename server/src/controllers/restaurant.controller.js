@@ -231,9 +231,10 @@ export const uploadLogo = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Please upload an image');
   }
 
-  // For now, we'll store the file path locally
-  // In production, you'd upload to Cloudinary or S3
-  const logoUrl = `/uploads/${req.file.filename}`;
+  // Build full URL for the uploaded file
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const logoUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
 
   restaurant.logo = {
     url: logoUrl,
@@ -264,7 +265,10 @@ export const uploadCoverImage = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Please upload an image');
   }
 
-  const coverUrl = `/uploads/${req.file.filename}`;
+  // Build full URL for the uploaded file
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const coverUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
 
   restaurant.coverImage = {
     url: coverUrl,

@@ -32,9 +32,11 @@ import {
   Bell,
   Volume2,
   VolumeX,
+  FileText,
 } from 'lucide-react';
 import { restaurantApi } from '../../api/restaurant.api';
 import { orderApi } from '../../api/order.api';
+import InvoiceModal from './components/InvoiceModal';
 
 // Status configuration
 const statusConfig = {
@@ -110,8 +112,9 @@ const statusConfig = {
   },
 };
 
-const OrderManagement = () => {
-  const { id: restaurantId } = useParams();
+const OrderManagement = ({ restaurantId: propRestaurantId }) => {
+  const { id: paramRestaurantId } = useParams();
+  const restaurantId = propRestaurantId || paramRestaurantId;
   const navigate = useNavigate();
 
   const [restaurant, setRestaurant] = useState(null);
@@ -122,6 +125,7 @@ const OrderManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showInvoice, setShowInvoice] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Fetch data
@@ -140,8 +144,11 @@ const OrderManagement = () => {
       setOrders(ordersRes.data.orders || []);
       setSummary(summaryRes.data);
     } catch (error) {
-      toast.error('Failed to load orders');
-      console.error(error);
+      // Only show error if we have a restaurantId to attempt fetching
+      if (restaurantId) {
+        toast.error('Failed to load orders');
+        console.error(error);
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -268,18 +275,28 @@ const OrderManagement = () => {
     );
   }
 
+  if (!restaurantId) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-gray-500">Please select a restaurant to view orders</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <button
-            onClick={() => navigate('/dashboard/restaurants')}
-            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 mb-2 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Restaurants</span>
-          </button>
+          {!propRestaurantId && (
+            <button
+              onClick={() => navigate('/dashboard/restaurants')}
+              className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 mb-2 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Restaurants</span>
+            </button>
+          )}
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Order Management
           </h1>
@@ -290,11 +307,10 @@ const OrderManagement = () => {
           {/* Sound Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-2 rounded-xl border transition-colors ${
-              soundEnabled
-                ? 'border-sky-200 bg-sky-50 text-sky-600'
-                : 'border-gray-200 bg-white text-gray-400'
-            }`}
+            className={`p-2 rounded-xl border transition-colors ${soundEnabled
+              ? 'border-sky-200 bg-sky-50 text-sky-600'
+              : 'border-gray-200 bg-white text-gray-400'
+              }`}
             title={soundEnabled ? 'Sound on' : 'Sound off'}
           >
             {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
@@ -415,6 +431,7 @@ const OrderManagement = () => {
                 key={order._id}
                 order={order}
                 onView={() => setSelectedOrder(order)}
+                onViewInvoice={() => setShowInvoice(order)}
                 onUpdateStatus={updateOrderStatus}
                 onCancel={cancelOrder}
                 formatTime={formatTime}
@@ -434,6 +451,15 @@ const OrderManagement = () => {
         formatTime={formatTime}
         formatDate={formatDate}
       />
+
+      {/* Invoice Modal */}
+      {showInvoice && (
+        <InvoiceModal
+          order={showInvoice}
+          restaurant={restaurant}
+          onClose={() => setShowInvoice(null)}
+        />
+      )}
     </div>
   );
 };
@@ -453,9 +479,8 @@ const SummaryCard = ({ title, value, icon: Icon, color, highlight }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-2xl shadow-sm border p-5 ${
-        highlight ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-100'
-      }`}
+      className={`bg-white rounded-2xl shadow-sm border p-5 ${highlight ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-100'
+        }`}
     >
       <div className="flex items-start justify-between">
         <div className={`p-3 rounded-xl ${colorClasses[color]}`}>
@@ -481,18 +506,16 @@ const StatusTab = ({ label, count, active, onClick, color = 'sky' }) => {
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-        active
-          ? 'bg-sky-500 text-white shadow-md'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-      }`}
+      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${active
+        ? 'bg-sky-500 text-white shadow-md'
+        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+        }`}
     >
       <span>{label}</span>
       {count > 0 && (
         <span
-          className={`px-2 py-0.5 rounded-full text-xs ${
-            active ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'
-          }`}
+          className={`px-2 py-0.5 rounded-full text-xs ${active ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'
+            }`}
         >
           {count}
         </span>
@@ -502,7 +525,7 @@ const StatusTab = ({ label, count, active, onClick, color = 'sky' }) => {
 };
 
 // Order Card
-const OrderCard = ({ order, onView, onUpdateStatus, onCancel, formatTime, getTimeAgo }) => {
+const OrderCard = ({ order, onView, onViewInvoice, onUpdateStatus, onCancel, formatTime, getTimeAgo }) => {
   const [showActions, setShowActions] = useState(false);
   const config = statusConfig[order.status];
   const StatusIcon = config.icon;
@@ -512,9 +535,8 @@ const OrderCard = ({ order, onView, onUpdateStatus, onCancel, formatTime, getTim
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${
-        order.status === 'pending' ? 'border-amber-200' : 'border-gray-100'
-      }`}
+      className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${order.status === 'pending' ? 'border-amber-200' : 'border-gray-100'
+        }`}
     >
       {/* Pending Order Highlight Bar */}
       {order.status === 'pending' && (
@@ -607,6 +629,15 @@ const OrderCard = ({ order, onView, onUpdateStatus, onCancel, formatTime, getTim
                 title="View Details"
               >
                 <Eye className="w-5 h-5" />
+              </button>
+
+              {/* View Invoice */}
+              <button
+                onClick={onViewInvoice}
+                className="p-2 text-gray-400 hover:text-sky-500 hover:bg-sky-50 rounded-xl transition-colors"
+                title="View Invoice"
+              >
+                <FileText className="w-5 h-5" />
               </button>
 
               {/* Next Status Action */}
@@ -894,11 +925,10 @@ const OrderDetailModal = ({ order, onClose, onUpdateStatus, onCancel, formatTime
                     (status, index, arr) => (
                       <span key={status} className="flex items-center">
                         <span
-                          className={`px-2 py-0.5 rounded ${
-                            order.status === status
-                              ? 'bg-sky-100 text-sky-700 font-medium'
-                              : 'text-gray-400'
-                          }`}
+                          className={`px-2 py-0.5 rounded ${order.status === status
+                            ? 'bg-sky-100 text-sky-700 font-medium'
+                            : 'text-gray-400'
+                            }`}
                         >
                           {statusConfig[status].label}
                         </span>

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { publicMenuApi } from '../../api/publicMenu.api';
 import { orderApi } from '../../api/order.api';
+import { getImageUrl } from '../../utils/getImageUrl';
 
 // Category Icons
 const categoryIcons = {
@@ -148,7 +149,7 @@ const PublicMenu = () => {
   // Filter items
   const getFilteredCategories = () => {
     if (!searchQuery.trim()) return categories;
-    
+
     return categories
       .map((cat) => ({
         ...cat,
@@ -203,7 +204,7 @@ const PublicMenu = () => {
         <div className="h-44 relative overflow-hidden">
           {restaurant?.coverImage?.url ? (
             <img
-              src={restaurant.coverImage.url}
+              src={getImageUrl(restaurant.coverImage.url)}
               alt=""
               className="w-full h-full object-cover"
             />
@@ -226,7 +227,7 @@ const PublicMenu = () => {
               <div className="w-20 h-20 rounded-2xl shadow-lg overflow-hidden flex-shrink-0 border-4 border-white -mt-10">
                 {restaurant?.logo?.url ? (
                   <img
-                    src={restaurant.logo.url}
+                    src={getImageUrl(restaurant.logo.url)}
                     alt={restaurant.name}
                     className="w-full h-full object-cover"
                   />
@@ -248,7 +249,7 @@ const PublicMenu = () => {
                 {restaurant?.subtitle && (
                   <p className="text-gray-500 text-sm mt-0.5">{restaurant.subtitle}</p>
                 )}
-                
+
                 <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-600">
                   {restaurant?.timing && (
                     <span className="flex items-center gap-1.5">
@@ -317,11 +318,10 @@ const PublicMenu = () => {
                 <button
                   key={cat._id}
                   onClick={() => scrollToCategory(cat._id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                    activeCategory === cat._id
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${activeCategory === cat._id
                       ? 'text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                   style={{
                     backgroundColor: activeCategory === cat._id ? primaryColor : undefined,
                   }}
@@ -470,9 +470,8 @@ const MenuItemCard = ({ item, primaryColor, quantity, onAdd, onRemove, onView })
   return (
     <motion.div
       layout
-      className={`bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 ${
-        !item.isAvailable ? 'opacity-50' : ''
-      }`}
+      className={`bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 ${!item.isAvailable ? 'opacity-50' : ''
+        }`}
     >
       <div className="flex gap-3 p-3">
         {/* Image */}
@@ -772,9 +771,8 @@ const CheckoutModal = ({ isOpen, onClose, cart, primaryColor, restaurantId, onSu
                   value={formData.customerName}
                   onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                   placeholder="Enter your name"
-                  className={`w-full pl-12 pr-4 py-3.5 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 transition-all ${
-                    errors.customerName ? 'ring-2 ring-red-500' : ''
-                  }`}
+                  className={`w-full pl-12 pr-4 py-3.5 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 transition-all ${errors.customerName ? 'ring-2 ring-red-500' : ''
+                    }`}
                   style={{ '--tw-ring-color': primaryColor }}
                 />
               </div>
@@ -795,9 +793,8 @@ const CheckoutModal = ({ isOpen, onClose, cart, primaryColor, restaurantId, onSu
                   value={formData.tableNumber}
                   onChange={(e) => setFormData({ ...formData, tableNumber: e.target.value })}
                   placeholder="e.g., Table 5"
-                  className={`w-full pl-12 pr-4 py-3.5 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 transition-all ${
-                    errors.tableNumber ? 'ring-2 ring-red-500' : ''
-                  }`}
+                  className={`w-full pl-12 pr-4 py-3.5 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 transition-all ${errors.tableNumber ? 'ring-2 ring-red-500' : ''
+                    }`}
                   style={{ '--tw-ring-color': primaryColor }}
                 />
               </div>

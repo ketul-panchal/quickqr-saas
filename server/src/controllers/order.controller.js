@@ -6,6 +6,8 @@ import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { paginate } from '../utils/helpers.js';
 import logger from '../config/logger.js';
+import { emitNewOrder, emitOrderStatusUpdate } from '../sockets/orderSocket.js';
+import { createNotification } from './notification.controller.js';
 
 /**
  * @desc    Place a new order (Public - Customer)
@@ -92,6 +94,31 @@ export const placeOrder = asyncHandler(async (req, res) => {
   });
 
   logger.info(`New order placed: ${order.orderNumber} for restaurant ${restaurant.name}`);
+
+  // Create notification for restaurant owner
+  try {
+    await createNotification({
+      user: restaurant.owner,
+      restaurant: restaurantId,
+      type: 'new_order',
+      title: 'New Order Received',
+      message: `Table ${tableNumber} placed an order - ${orderNumber}`,
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        customerName,
+        tableNumber,
+        total: order.total,
+        itemCount: orderItems.length,
+      },
+    });
+
+    // Emit socket event for real-time notification
+    emitNewOrder(restaurantId.toString(), restaurant.owner.toString(), order);
+  } catch (err) {
+    logger.error('Failed to create notification:', err.message);
+    // Don't fail the order if notification fails
+  }
 
   ApiResponse.created({
     orderNumber: order.orderNumber,

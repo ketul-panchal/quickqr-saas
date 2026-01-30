@@ -27,6 +27,7 @@ import {
 import { restaurantApi } from '../../api/restaurant.api';
 import MobilePreviewModal from '../../components/common/MobilePreviewModal';
 import { ShoppingBag } from 'lucide-react';
+import { getImageUrl } from '../../utils/getImageUrl';
 
 
 const MyRestaurants = () => {
@@ -232,7 +233,7 @@ const MyRestaurants = () => {
                                 <div className="relative h-32 bg-gradient-to-br from-sky-400 to-emerald-400">
                                     {restaurant.coverImage?.url && (
                                         <img
-                                            src={restaurant.coverImage.url}
+                                            src={getImageUrl(restaurant.coverImage.url)}
                                             alt={restaurant.name}
                                             className="w-full h-full object-cover"
                                         />
@@ -242,8 +243,8 @@ const MyRestaurants = () => {
                                     <div className="absolute top-3 left-3">
                                         <span
                                             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${restaurant.isPublished
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-gray-100 text-gray-600'
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-gray-100 text-gray-600'
                                                 }`}
                                         >
                                             <span
@@ -318,7 +319,7 @@ const MyRestaurants = () => {
                                         <div className="w-16 h-16 bg-white rounded-xl shadow-lg border-4 border-white overflow-hidden">
                                             {restaurant.logo?.url ? (
                                                 <img
-                                                    src={restaurant.logo.url}
+                                                    src={getImageUrl(restaurant.logo.url)}
                                                     alt={restaurant.name}
                                                     className="w-full h-full object-cover"
                                                 />
@@ -416,16 +417,16 @@ const MyRestaurants = () => {
                                         </Link>
 
                                         {/* Orders - Add this between QR and Tables */}
-<Link
-  to={`/dashboard/restaurants/${restaurant._id}/orders`}
-  className="flex flex-col items-center justify-center p-3 bg-gray-50 hover:bg-orange-50 rounded-xl transition-colors group/btn"
-  title="Orders"
->
-  <ShoppingBag className="w-5 h-5 text-gray-400 group-hover/btn:text-orange-500" />
-  <span className="text-xs text-gray-500 mt-1 group-hover/btn:text-orange-600">
-    Orders
-  </span>
-</Link>
+                                        <Link
+                                            to={`/dashboard/restaurants/${restaurant._id}/orders`}
+                                            className="flex flex-col items-center justify-center p-3 bg-gray-50 hover:bg-orange-50 rounded-xl transition-colors group/btn"
+                                            title="Orders"
+                                        >
+                                            <ShoppingBag className="w-5 h-5 text-gray-400 group-hover/btn:text-orange-500" />
+                                            <span className="text-xs text-gray-500 mt-1 group-hover/btn:text-orange-600">
+                                                Orders
+                                            </span>
+                                        </Link>
 
                                         {/* Public View */}
                                         {/* <button
