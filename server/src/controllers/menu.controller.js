@@ -6,6 +6,28 @@ import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import logger from '../config/logger.js';
 
+/**
+ * Helper function to verify restaurant access
+ * Allows both restaurant owners and admin users
+ */
+const verifyRestaurantAccess = async (restaurantId, user) => {
+  // Admin users can access any restaurant
+  if (user.role === 'admin' || user.role === 'super_admin') {
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+      throw ApiError.notFound('Restaurant not found');
+    }
+    return restaurant;
+  }
+  
+  // Regular users must be the owner
+  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: user.id });
+  if (!restaurant) {
+    throw ApiError.notFound('Restaurant not found');
+  }
+  return restaurant;
+};
+
 // ============ CATEGORIES ============
 
 /**
@@ -15,13 +37,9 @@ import logger from '../config/logger.js';
  */
 export const getCategories = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const categories = await Category.find({ restaurant: restaurantId })
     .sort({ order: 1, createdAt: 1 });
@@ -47,14 +65,10 @@ export const getCategories = asyncHandler(async (req, res) => {
  */
 export const createCategory = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
-  const userId = req.user.id;
   const { name, description, icon } = req.body;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   // Check if category name already exists
   const existingCategory = await Category.findOne({
@@ -95,13 +109,9 @@ export const createCategory = asyncHandler(async (req, res) => {
  */
 export const updateCategory = asyncHandler(async (req, res) => {
   const { restaurantId, categoryId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   let category = await Category.findOne({
     _id: categoryId,
@@ -123,9 +133,18 @@ export const updateCategory = asyncHandler(async (req, res) => {
     }
   }
 
+  // Only update allowed fields (whitelist approach)
+  const allowedFields = ['name', 'description', 'icon', 'image', 'order', 'isActive'];
+  const updateData = {};
+  allowedFields.forEach(field => {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  });
+
   category = await Category.findByIdAndUpdate(
     categoryId,
-    { ...req.body },
+    updateData,
     { new: true, runValidators: true }
   );
 
@@ -139,13 +158,9 @@ export const updateCategory = asyncHandler(async (req, res) => {
  */
 export const deleteCategory = asyncHandler(async (req, res) => {
   const { restaurantId, categoryId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const category = await Category.findOne({
     _id: categoryId,
@@ -182,13 +197,9 @@ export const deleteCategory = asyncHandler(async (req, res) => {
 export const reorderCategories = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
   const { categories } = req.body; // Array of { id, order }
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   // Update each category's order
   await Promise.all(
@@ -212,13 +223,9 @@ export const reorderCategories = asyncHandler(async (req, res) => {
  */
 export const getMenuItems = asyncHandler(async (req, res) => {
   const { restaurantId, categoryId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const items = await MenuItem.find({ category: categoryId })
     .sort({ order: 1, createdAt: 1 });
@@ -233,13 +240,9 @@ export const getMenuItems = asyncHandler(async (req, res) => {
  */
 export const getAllMenuItems = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const items = await MenuItem.find({ restaurant: restaurantId })
     .populate('category', 'name')
@@ -255,13 +258,9 @@ export const getAllMenuItems = asyncHandler(async (req, res) => {
  */
 export const createMenuItem = asyncHandler(async (req, res) => {
   const { restaurantId, categoryId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   // Verify category exists
   const category = await Category.findOne({
@@ -313,13 +312,9 @@ export const createMenuItem = asyncHandler(async (req, res) => {
  */
 export const updateMenuItem = asyncHandler(async (req, res) => {
   const { restaurantId, itemId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   let item = await MenuItem.findOne({
     _id: itemId,
@@ -335,9 +330,22 @@ export const updateMenuItem = asyncHandler(async (req, res) => {
     await Category.findByIdAndUpdate(req.body.category, { $inc: { itemCount: 1 } });
   }
 
+  // Only update allowed fields (whitelist approach)
+  const allowedFields = [
+    'name', 'description', 'price', 'salePrice', 'image', 'images',
+    'category', 'order', 'badges', 'variants', 'addons', 'nutritionInfo',
+    'preparationTime', 'isActive', 'isAvailable'
+  ];
+  const updateData = {};
+  allowedFields.forEach(field => {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  });
+
   item = await MenuItem.findByIdAndUpdate(
     itemId,
-    { ...req.body },
+    updateData,
     { new: true, runValidators: true }
   );
 
@@ -351,13 +359,9 @@ export const updateMenuItem = asyncHandler(async (req, res) => {
  */
 export const deleteMenuItem = asyncHandler(async (req, res) => {
   const { restaurantId, itemId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const item = await MenuItem.findOne({
     _id: itemId,
@@ -389,13 +393,9 @@ export const deleteMenuItem = asyncHandler(async (req, res) => {
  */
 export const toggleItemAvailability = asyncHandler(async (req, res) => {
   const { restaurantId, itemId } = req.params;
-  const userId = req.user.id;
 
-  // Verify ownership
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  // Verify access (owner or admin)
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const item = await MenuItem.findOne({
     _id: itemId,

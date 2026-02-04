@@ -7,6 +7,8 @@ import {
     LayoutDashboard,
     Users,
     Store,
+    UtensilsCrossed,
+    Table2,
     Receipt,
     Settings,
     LogOut,
@@ -20,9 +22,12 @@ const sidebarLinks = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Users', path: '/admin/users', icon: Users },
     { name: 'Restaurants', path: '/admin/restaurants', icon: Store },
+    { name: 'Menus', path: '/admin/menus', icon: UtensilsCrossed },
+    { name: 'Tables', path: '/admin/tables', icon: Table2 },
     { name: 'Transactions', path: '/admin/transactions', icon: Receipt },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
 ];
+
 
 const AdminLayout = () => {
     const { user, logout } = useAuth();
@@ -89,8 +94,8 @@ const AdminLayout = () => {
                                         to={link.path}
                                         onClick={() => setSidebarOpen(false)}
                                         className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${isActive
-                                                ? 'bg-amber-500/20 text-amber-400'
-                                                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                            ? 'bg-amber-500/20 text-amber-400'
+                                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                                             }`}
                                     >
                                         <Icon className="w-5 h-5" />

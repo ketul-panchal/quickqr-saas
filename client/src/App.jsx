@@ -48,7 +48,7 @@ import {
   Settings,
   Orders,
 } from './pages/dashboard';
-import { AdminLogin, AdminDashboard, AdminUsers, AdminRestaurants, AdminRestaurantForm } from './pages/admin';
+import { AdminLogin, AdminDashboard, AdminUsers, AdminRestaurants, AdminRestaurantForm, AdminMenus, AdminTables } from './pages/admin';
 import NotFound from './pages/errors/NotFound';
 
 // Layouts
@@ -118,6 +118,8 @@ function App() {
               <Route path="restaurants" element={<AdminRestaurants />} />
               <Route path="restaurants/new" element={<AdminRestaurantForm />} />
               <Route path="restaurants/:id/edit" element={<AdminRestaurantForm />} />
+              <Route path="menus" element={<AdminMenus />} />
+              <Route path="tables" element={<AdminTables />} />
               <Route path="transactions" element={<PlaceholderPage title="Transactions" />} />
               <Route path="settings" element={<PlaceholderPage title="Admin Settings" />} />
             </Route>

@@ -6,18 +6,35 @@ import ApiResponse from '../utils/ApiResponse.js';
 import logger from '../config/logger.js';
 
 /**
+ * Helper function to verify restaurant access for both owners and admins
+ */
+const verifyRestaurantAccess = async (restaurantId, user) => {
+  // Admins can access any restaurant
+  if (user.role === 'admin' || user.role === 'super_admin') {
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+      throw ApiError.notFound('Restaurant not found');
+    }
+    return restaurant;
+  }
+  
+  // Regular users must be the owner
+  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: user.id });
+  if (!restaurant) {
+    throw ApiError.notFound('Restaurant not found');
+  }
+  return restaurant;
+};
+
+/**
  * @desc    Get all tables for a restaurant
  * @route   GET /api/v1/restaurants/:restaurantId/tables
  * @access  Private
  */
 export const getTables = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
-  const userId = req.user.id;
 
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  const restaurant = await verifyRestaurantAccess(restaurantId, req.user);
 
   const tables = await Table.find({ restaurant: restaurantId }).sort({ number: 1 });
 
@@ -31,12 +48,8 @@ export const getTables = asyncHandler(async (req, res) => {
  */
 export const createTable = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
-  const userId = req.user.id;
 
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  const restaurant = await verifyRestaurantAccess(restaurantId, req.user);
 
   // Check if table number exists
   const existingTable = await Table.findOne({
@@ -65,12 +78,8 @@ export const createTable = asyncHandler(async (req, res) => {
 export const createBulkTables = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
   const { startNumber, endNumber, prefix = 'Table', location = 'indoor' } = req.body;
-  const userId = req.user.id;
 
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const tables = [];
   for (let i = startNumber; i <= endNumber; i++) {
@@ -101,12 +110,8 @@ export const createBulkTables = asyncHandler(async (req, res) => {
  */
 export const updateTable = asyncHandler(async (req, res) => {
   const { restaurantId, tableId } = req.params;
-  const userId = req.user.id;
 
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   let table = await Table.findOne({ _id: tableId, restaurant: restaurantId });
   if (!table) {
@@ -137,12 +142,8 @@ export const updateTable = asyncHandler(async (req, res) => {
  */
 export const updateQRSettings = asyncHandler(async (req, res) => {
   const { restaurantId, tableId } = req.params;
-  const userId = req.user.id;
 
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const table = await Table.findOneAndUpdate(
     { _id: tableId, restaurant: restaurantId },
@@ -164,12 +165,8 @@ export const updateQRSettings = asyncHandler(async (req, res) => {
  */
 export const deleteTable = asyncHandler(async (req, res) => {
   const { restaurantId, tableId } = req.params;
-  const userId = req.user.id;
 
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const table = await Table.findOneAndDelete({ _id: tableId, restaurant: restaurantId });
   if (!table) {
@@ -187,12 +184,8 @@ export const deleteTable = asyncHandler(async (req, res) => {
 export const deleteBulkTables = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
   const { tableIds } = req.body;
-  const userId = req.user.id;
 
-  const restaurant = await Restaurant.findOne({ _id: restaurantId, owner: userId });
-  if (!restaurant) {
-    throw ApiError.notFound('Restaurant not found');
-  }
+  await verifyRestaurantAccess(restaurantId, req.user);
 
   const result = await Table.deleteMany({
     _id: { $in: tableIds },
