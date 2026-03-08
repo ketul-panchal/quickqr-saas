@@ -16,6 +16,7 @@ import {
     X,
     ChevronRight,
     QrCode,
+    ShoppingBag
 } from 'lucide-react';
 
 const sidebarLinks = [
@@ -24,6 +25,7 @@ const sidebarLinks = [
     { name: 'Restaurants', path: '/admin/restaurants', icon: Store },
     { name: 'Menus', path: '/admin/menus', icon: UtensilsCrossed },
     { name: 'Tables', path: '/admin/tables', icon: Table2 },
+    { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
     { name: 'Transactions', path: '/admin/transactions', icon: Receipt },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
 ];

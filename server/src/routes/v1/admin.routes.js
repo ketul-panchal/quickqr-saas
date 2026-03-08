@@ -17,6 +17,10 @@ import {
   updateRestaurant,
   deleteRestaurant,
   toggleRestaurantStatus,
+  getAllOrders,
+  getOrderById,
+  updateOrderStatus,
+  deleteOrder,
 } from '../../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -50,6 +54,12 @@ router.get('/restaurants/:id', getRestaurantById);
 router.put('/restaurants/:id', updateRestaurant);
 router.delete('/restaurants/:id', deleteRestaurant);
 router.patch('/restaurants/:id/status', toggleRestaurantStatus);
+
+// Order Management CRUD
+router.get('/orders', getAllOrders);
+router.get('/orders/:id', getOrderById);
+router.patch('/orders/:id/status', updateOrderStatus);
+router.delete('/orders/:id', deleteOrder);
 
 export default router;
 

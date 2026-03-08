@@ -5,6 +5,5 @@ export { default as AdminRestaurants } from './AdminRestaurants';
 export { default as AdminRestaurantForm } from './AdminRestaurantForm';
 export { default as AdminMenus } from './AdminMenus';
 export { default as AdminTables } from './AdminTables';
-
-
-
+export { default as AdminOrders } from './AdminOrders';
+export { default as AdminTransactions } from './AdminTransactions';

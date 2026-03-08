@@ -86,9 +86,34 @@ export const adminApi = {
     return apiClient.delete(`/admin/restaurants/${id}`);
   },
 
-  // Toggle restaurant status
+  //Toggle restaurant status
   toggleRestaurantStatus: async (id) => {
     return apiClient.patch(`/admin/restaurants/${id}/status`);
+  },
+
+  // ==========================================
+  // ORDER MANAGEMENT
+  // ==========================================
+
+  // Get all orders with pagination and filters
+  getOrders: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return apiClient.get(`/admin/orders?${queryString}`);
+  },
+
+  // Get single order
+  getOrder: async (id) => {
+    return apiClient.get(`/admin/orders/${id}`);
+  },
+
+  // Update order status
+  updateOrderStatus: async (id, data) => {
+    return apiClient.patch(`/admin/orders/${id}/status`, data);
+  },
+
+  // Delete order
+  deleteOrder: async (id) => {
+    return apiClient.delete(`/admin/orders/${id}`);
   },
 };
 

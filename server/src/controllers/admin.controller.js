@@ -3,6 +3,7 @@ import Restaurant from '../models/restaurant.model.js';
 import Order from '../models/order.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { paginate } from '../utils/helpers.js';
 
 /**
  * @desc    Get dashboard stats
@@ -505,4 +506,144 @@ export const toggleRestaurantStatus = asyncHandler(async (req, res) => {
     { isActive: restaurant.isActive },
     `Restaurant ${restaurant.isActive ? 'activated' : 'deactivated'} successfully`
   ).send(res);
+});
+
+// ==========================================
+// ORDER MANAGEMENT CRUD
+// ==========================================
+
+/**
+ * @desc    Get all orders with pagination and filters
+ * @route   GET /api/v1/admin/orders
+ * @access  Admin
+ */
+export const getAllOrders = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20, status, restaurantId, search, date } = req.query;
+
+  // Build query
+  const query = {};
+
+  if (status && status !== 'all') {
+    query.status = status;
+  }
+
+  if (restaurantId && restaurantId !== 'all') {
+    query.restaurant = restaurantId;
+  }
+
+  if (search) {
+    query.$or = [
+      { orderNumber: { $regex: search, $options: 'i' } },
+      { customerName: { $regex: search, $options: 'i' } },
+      { tableNumber: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  if (date) {
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+    query.createdAt = { $gte: startDate, $lte: endDate };
+  }
+
+  const numericPage = parseInt(page);
+  const numericLimit = parseInt(limit);
+  const total = await Order.countDocuments(query);
+  const pagination = paginate(numericPage, numericLimit, total);
+
+  const orders = await Order.find(query)
+    .populate('restaurant', 'name slug logo address phone email website')
+    .sort({ createdAt: -1 })
+    .skip(pagination.skip)
+    .limit(pagination.itemsPerPage);
+
+  // Get stats for these filters (optional, but good for dashboard view)
+  const stats = await Order.aggregate([
+    { $match: query },
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 },
+        total: { $sum: '$total' },
+      },
+    },
+  ]);
+
+  ApiResponse.success({
+    orders,
+    stats,
+    pagination: {
+      currentPage: pagination.currentPage,
+      totalPages: pagination.totalPages,
+      totalItems: pagination.totalItems,
+      itemsPerPage: pagination.itemsPerPage,
+    },
+  }).send(res);
+});
+
+/**
+ * @desc    Get single order by ID
+ * @route   GET /api/v1/admin/orders/:id
+ * @access  Admin
+ */
+export const getOrderById = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id)
+    .populate('restaurant', 'name email phone address');
+
+  if (!order) {
+    return ApiResponse.notFound('Order not found').send(res);
+  }
+
+  ApiResponse.success(order).send(res);
+});
+
+/**
+ * @desc    Update order status
+ * @route   PATCH /api/v1/admin/orders/:id/status
+ * @access  Admin
+ */
+export const updateOrderStatus = asyncHandler(async (req, res) => {
+  const { status, paymentStatus, cancelReason } = req.body;
+
+  const order = await Order.findById(req.params.id);
+  if (!order) {
+    return ApiResponse.notFound('Order not found').send(res);
+  }
+
+  if (status) {
+    order.status = status;
+    if (status === 'completed') {
+      order.completedAt = new Date();
+    }
+    if (status === 'cancelled') {
+      order.cancelledAt = new Date();
+      order.cancelReason = cancelReason || 'Cancelled by admin';
+    }
+  }
+
+  if (paymentStatus) {
+    order.paymentStatus = paymentStatus;
+  }
+
+  await order.save();
+
+  ApiResponse.success(order, 'Order status updated successfully').send(res);
+});
+
+/**
+ * @desc    Delete order
+ * @route   DELETE /api/v1/admin/orders/:id
+ * @access  Admin
+ */
+export const deleteOrder = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  
+  if (!order) {
+    return ApiResponse.notFound('Order not found').send(res);
+  }
+
+  await Order.findByIdAndDelete(req.params.id);
+
+  ApiResponse.success(null, 'Order deleted successfully').send(res);
 });

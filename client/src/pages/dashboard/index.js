@@ -7,3 +7,4 @@ export { default as MenuManagement } from './MenuManagement';
 export { default as OrderManagement } from './OrderManagement';
 export { default as TablesManagement } from './TablesManagement';
 export { default as Settings } from './Settings';
+export { default as Transactions } from './Transactions';
