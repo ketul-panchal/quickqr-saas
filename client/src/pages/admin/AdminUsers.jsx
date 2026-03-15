@@ -262,6 +262,7 @@ const AdminUsers = () => {
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Email</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Role</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">Plan</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Status</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">Joined</th>
                                 <th className="px-6 py-4 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
@@ -313,6 +314,18 @@ const AdminUsers = () => {
                                                 <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md ${roleBadge.style}`}>
                                                     {roleBadge.label}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 hidden lg:table-cell">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm text-gray-200 capitalize">
+                                                        {user.subscription?.plan || 'free'}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {(user.role === 'admin' || user.role === 'super_admin')
+                                                            ? 'Full access'
+                                                            : (user.subscription?.status || 'trial')}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 hidden sm:table-cell">
                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md ${user.isActive

@@ -63,3 +63,15 @@ export const checkUsernameSchema = Joi.object({
     }),
   }),
 });
+
+export const updateSubscriptionSchema = Joi.object({
+  body: Joi.object({
+    plan: Joi.string()
+      .valid('free', 'starter', 'professional', 'enterprise')
+      .required()
+      .messages({
+        'any.required': 'Plan is required',
+        'any.only': 'Invalid subscription plan',
+      }),
+  }),
+});

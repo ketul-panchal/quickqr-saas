@@ -40,8 +40,19 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [isAuthenticated]);
 
-    // Add a new notification (from socket)
+    // Add a new notification (from socket) with simple de-duplication
     const addNotification = useCallback((notification) => {
+        // Avoid duplicate toasts for the same order/notification
+        const key = `${notification.type || ''}:${notification.title}:${notification.message}:${notification.data?.orderId || ''}`;
+        const isDuplicate = notifications.some((n) => {
+            const nKey = `${n.type || ''}:${n.title}:${n.message}:${n.data?.orderId || ''}`;
+            return nKey === key;
+        });
+
+        if (isDuplicate) {
+            return;
+        }
+
         setNotifications((prev) => [notification, ...prev].slice(0, 50));
         setUnreadCount((prev) => prev + 1);
 
@@ -86,7 +97,7 @@ export const NotificationProvider = ({ children }) => {
                 position: 'top-right',
             }
         );
-    }, []);
+    }, [notifications]);
 
     // Mark notification as read
     const markAsRead = useCallback(async (notificationId) => {

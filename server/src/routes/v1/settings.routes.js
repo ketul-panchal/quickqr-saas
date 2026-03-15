@@ -8,6 +8,8 @@ import {
   updatePassword,
   getBilling,
   updateBilling,
+  getSubscription,
+  updateSubscriptionPlan,
 } from '../../controllers/settings.controller.js';
 import { protect } from '../../middlewares/auth.middleware.js';
 import validate from '../../middlewares/validate.middleware.js';
@@ -17,6 +19,7 @@ import {
   updatePasswordSchema,
   updateBillingSchema,
   checkUsernameSchema,
+  updateSubscriptionSchema,
 } from '../../validators/settings.validator.js';
 
 const router = express.Router();
@@ -47,5 +50,11 @@ router
   .route('/billing')
   .get(getBilling)
   .put(validate(updateBillingSchema), updateBilling);
+
+// Subscription routes
+router
+  .route('/subscription')
+  .get(getSubscription)
+  .put(validate(updateSubscriptionSchema), updateSubscriptionPlan);
 
 export default router;

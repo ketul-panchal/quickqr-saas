@@ -33,6 +33,17 @@ const UserModal = ({ isOpen, onClose, onSuccess, user, mode }) => {
         phone: '',
         role: 'user',
     });
+    const [subscription, setSubscription] = useState({
+        plan: 'free',
+        status: 'trial',
+        endDate: '',
+        maxRestaurants: 1,
+        maxMenuItems: 50,
+        maxScansPerMonth: 500,
+        customBranding: false,
+        analytics: false,
+        prioritySupport: false,
+    });
 
     useEffect(() => {
         if (user && (mode === 'edit' || mode === 'view')) {
@@ -44,6 +55,19 @@ const UserModal = ({ isOpen, onClose, onSuccess, user, mode }) => {
                 phone: user.phone || '',
                 role: user.role || 'user',
             });
+            const sub = user.subscription || {};
+            const features = sub.features || {};
+            setSubscription({
+                plan: sub.plan || 'free',
+                status: sub.status || 'trial',
+                endDate: sub.endDate ? dayjs(sub.endDate).format('YYYY-MM-DD') : '',
+                maxRestaurants: features.maxRestaurants ?? 1,
+                maxMenuItems: features.maxMenuItems ?? 50,
+                maxScansPerMonth: features.maxScansPerMonth ?? 500,
+                customBranding: features.customBranding ?? false,
+                analytics: features.analytics ?? false,
+                prioritySupport: features.prioritySupport ?? false,
+            });
             setAvatarPreview(user.avatar || null);
         } else {
             setFormData({
@@ -54,6 +78,17 @@ const UserModal = ({ isOpen, onClose, onSuccess, user, mode }) => {
                 phone: '',
                 role: 'user',
             });
+            setSubscription({
+                plan: 'free',
+                status: 'trial',
+                endDate: '',
+                maxRestaurants: 1,
+                maxMenuItems: 50,
+                maxScansPerMonth: 500,
+                customBranding: false,
+                analytics: false,
+                prioritySupport: false,
+            });
             setAvatarPreview(null);
         }
         setAvatarFile(null);
@@ -61,6 +96,14 @@ const UserModal = ({ isOpen, onClose, onSuccess, user, mode }) => {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubscriptionChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setSubscription((prev) => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value,
+        }));
     };
 
     const handleAvatarChange = (e) => {
@@ -92,20 +135,40 @@ const UserModal = ({ isOpen, onClose, onSuccess, user, mode }) => {
         setLoading(true);
 
         try {
+            const subscriptionPayload = {
+                plan: subscription.plan,
+                status: subscription.status,
+                endDate: subscription.endDate ? new Date(subscription.endDate).toISOString() : null,
+                features: {
+                    maxRestaurants: Number(subscription.maxRestaurants) || 0,
+                    maxMenuItems: Number(subscription.maxMenuItems) || 0,
+                    maxScansPerMonth: Number(subscription.maxScansPerMonth) || 0,
+                    customBranding: !!subscription.customBranding,
+                    analytics: !!subscription.analytics,
+                    prioritySupport: !!subscription.prioritySupport,
+                },
+            };
+
             if (mode === 'create') {
                 if (!formData.password) {
                     toast.error('Password is required');
                     setLoading(false);
                     return;
                 }
-                await adminApi.createUser(formData);
+                await adminApi.createUser({
+                    ...formData,
+                    subscription: subscriptionPayload,
+                });
                 toast.success('User created successfully');
             } else if (mode === 'edit') {
                 const updateData = { ...formData };
                 if (!updateData.password) {
                     delete updateData.password;
                 }
-                await adminApi.updateUser(user._id, updateData);
+                await adminApi.updateUser(user._id, {
+                    ...updateData,
+                    subscription: subscriptionPayload,
+                });
                 toast.success('User updated successfully');
             }
             onSuccess();
@@ -222,6 +285,38 @@ const UserModal = ({ isOpen, onClose, onSuccess, user, mode }) => {
                                             }`}>
                                             {user?.isActive ? 'Active' : 'Inactive'}
                                         </span>
+                                    </div>
+                                </div>
+
+                                {/* Subscription Summary */}
+                                <div className="bg-slate-900 rounded-lg p-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-gray-400">Subscription</span>
+                                        <span className="text-xs text-gray-500">
+                                            {(user.role === 'admin' || user.role === 'super_admin') ? 'Full access (admin)' : 'User plan'}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3 text-sm">
+                                        <div>
+                                            <span className="text-gray-400">Plan: </span>
+                                            <span className="text-white capitalize">
+                                                {user.subscription?.plan || 'free'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-400">Status: </span>
+                                            <span className="text-white">
+                                                {user.subscription?.status || 'trial'}
+                                            </span>
+                                        </div>
+                                        {user.subscription?.endDate && (
+                                            <div>
+                                                <span className="text-gray-400">Ends: </span>
+                                                <span className="text-white">
+                                                    {dayjs(user.subscription.endDate).format('MMM D, YYYY')}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -385,6 +480,121 @@ const UserModal = ({ isOpen, onClose, onSuccess, user, mode }) => {
                                             <option value="admin">Admin</option>
                                             <option value="super_admin">Super Admin</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                {/* Subscription */}
+                                <div className="mt-4 border-t border-slate-700 pt-4">
+                                    <h3 className="text-sm font-semibold text-gray-200 mb-3">
+                                        Subscription & Access
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1.5">Plan</label>
+                                            <select
+                                                name="plan"
+                                                value={subscription.plan}
+                                                onChange={handleSubscriptionChange}
+                                                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                                            >
+                                                <option value="free">Free</option>
+                                                <option value="starter">Starter</option>
+                                                <option value="professional">Professional</option>
+                                                <option value="enterprise">Enterprise</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1.5">Status</label>
+                                            <select
+                                                name="status"
+                                                value={subscription.status}
+                                                onChange={handleSubscriptionChange}
+                                                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                                            >
+                                                <option value="trial">Trial</option>
+                                                <option value="active">Active</option>
+                                                <option value="inactive">Inactive</option>
+                                                <option value="cancelled">Cancelled</option>
+                                                <option value="expired">Expired</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1.5">Ends On</label>
+                                            <input
+                                                type="date"
+                                                name="endDate"
+                                                value={subscription.endDate}
+                                                onChange={handleSubscriptionChange}
+                                                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1.5">Max Restaurants</label>
+                                            <input
+                                                type="number"
+                                                name="maxRestaurants"
+                                                value={subscription.maxRestaurants}
+                                                onChange={handleSubscriptionChange}
+                                                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                                                min={0}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1.5">Max Menu Items</label>
+                                            <input
+                                                type="number"
+                                                name="maxMenuItems"
+                                                value={subscription.maxMenuItems}
+                                                onChange={handleSubscriptionChange}
+                                                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                                                min={0}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1.5">Max Scans / Month</label>
+                                            <input
+                                                type="number"
+                                                name="maxScansPerMonth"
+                                                value={subscription.maxScansPerMonth}
+                                                onChange={handleSubscriptionChange}
+                                                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-orange-500"
+                                                min={0}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <label className="inline-flex items-center gap-2 text-xs text-gray-300">
+                                            <input
+                                                type="checkbox"
+                                                name="customBranding"
+                                                checked={subscription.customBranding}
+                                                onChange={handleSubscriptionChange}
+                                                className="rounded border-slate-600 bg-slate-900 text-orange-500 focus:ring-orange-500"
+                                            />
+                                            Custom branding
+                                        </label>
+                                        <label className="inline-flex items-center gap-2 text-xs text-gray-300">
+                                            <input
+                                                type="checkbox"
+                                                name="analytics"
+                                                checked={subscription.analytics}
+                                                onChange={handleSubscriptionChange}
+                                                className="rounded border-slate-600 bg-slate-900 text-orange-500 focus:ring-orange-500"
+                                            />
+                                            Advanced analytics
+                                        </label>
+                                        <label className="inline-flex items-center gap-2 text-xs text-gray-300">
+                                            <input
+                                                type="checkbox"
+                                                name="prioritySupport"
+                                                checked={subscription.prioritySupport}
+                                                onChange={handleSubscriptionChange}
+                                                className="rounded border-slate-600 bg-slate-900 text-orange-500 focus:ring-orange-500"
+                                            />
+                                            Priority support
+                                        </label>
                                     </div>
                                 </div>
 

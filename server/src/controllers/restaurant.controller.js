@@ -14,14 +14,16 @@ import logger from '../config/logger.js';
 export const createRestaurant = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
-  // Check user's subscription limits
+  // Check user's subscription limits (skip for admin and super_admin)
   const user = await User.findById(userId);
-  const restaurantCount = await Restaurant.countDocuments({ owner: userId });
+  if (user.role !== 'admin' && user.role !== 'super_admin') {
+    const restaurantCount = await Restaurant.countDocuments({ owner: userId });
 
-  if (restaurantCount >= user.subscription.features.maxRestaurants) {
-    throw ApiError.forbidden(
-      `You have reached the maximum number of restaurants (${user.subscription.features.maxRestaurants}) for your plan. Please upgrade to add more.`
-    );
+    if (restaurantCount >= user.subscription.features.maxRestaurants) {
+      throw ApiError.forbidden(
+        `You have reached the maximum number of restaurants (${user.subscription.features.maxRestaurants}) for your plan. Please upgrade to add more.`
+      );
+    }
   }
 
   // Check if slug is already taken

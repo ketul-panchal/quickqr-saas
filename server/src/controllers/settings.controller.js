@@ -11,6 +11,50 @@ import logger from '../config/logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Subscription plan configurations (no payment integration yet)
+const SUBSCRIPTION_PLANS = {
+  free: {
+    features: {
+      maxRestaurants: 1,
+      maxMenuItems: 50,
+      maxScansPerMonth: 500,
+      customBranding: false,
+      analytics: false,
+      prioritySupport: false,
+    },
+  },
+  starter: {
+    features: {
+      maxRestaurants: 3,
+      maxMenuItems: 200,
+      maxScansPerMonth: 5000,
+      customBranding: false,
+      analytics: true,
+      prioritySupport: false,
+    },
+  },
+  professional: {
+    features: {
+      maxRestaurants: 10,
+      maxMenuItems: 1000,
+      maxScansPerMonth: 50000,
+      customBranding: true,
+      analytics: true,
+      prioritySupport: true,
+    },
+  },
+  enterprise: {
+    features: {
+      maxRestaurants: 999,
+      maxMenuItems: 9999,
+      maxScansPerMonth: 999999,
+      customBranding: true,
+      analytics: true,
+      prioritySupport: true,
+    },
+  },
+};
+
 /**
  * @desc    Get current user profile
  * @route   GET /api/v1/settings/profile
@@ -254,4 +298,55 @@ export const updateBilling = asyncHandler(async (req, res) => {
   logger.info(`Billing updated for user: ${user.email}`);
 
   ApiResponse.success(user.billing, 'Billing details updated successfully').send(res);
+});
+
+/**
+ * @desc    Get current subscription
+ * @route   GET /api/v1/settings/subscription
+ * @access  Private
+ */
+export const getSubscription = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  ApiResponse.success(user.subscription, 'Subscription retrieved successfully').send(res);
+});
+
+/**
+ * @desc    Update subscription plan (no payment integration)
+ * @route   PUT /api/v1/settings/subscription
+ * @access  Private
+ */
+export const updateSubscriptionPlan = asyncHandler(async (req, res) => {
+  const { plan } = req.body;
+
+  const planConfig = SUBSCRIPTION_PLANS[plan];
+  if (!planConfig) {
+    throw ApiError.badRequest('Invalid subscription plan');
+  }
+
+  const user = await User.findById(req.user.id);
+
+  if (!user) {
+    throw ApiError.notFound('User not found');
+  }
+
+  user.subscription = {
+    ...user.subscription,
+    plan,
+    status: 'active',
+    features: {
+      ...user.subscription.features,
+      ...planConfig.features,
+    },
+  };
+
+  await user.save();
+
+  logger.info(`Subscription updated for user: ${user.email} to plan: ${plan}`);
+
+  ApiResponse.success(user.subscription, 'Subscription updated successfully').send(res);
 });

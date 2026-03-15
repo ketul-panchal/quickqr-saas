@@ -7,3 +7,4 @@ export { default as AdminMenus } from './AdminMenus';
 export { default as AdminTables } from './AdminTables';
 export { default as AdminOrders } from './AdminOrders';
 export { default as AdminTransactions } from './AdminTransactions';
+export { default as AdminSettings } from './AdminSettings';

@@ -645,14 +645,14 @@ const Modal = ({ title, children, onClose }) => (
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
     onClick={onClose}
   >
     <motion.div
       initial={{ scale: 0.95 }}
       animate={{ scale: 1 }}
       onClick={(e) => e.stopPropagation()}
-      className="bg-white rounded-2xl w-full max-w-md p-6"
+      className="bg-white rounded-2xl w-full max-w-md p-6 mx-4"
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>

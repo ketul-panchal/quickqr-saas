@@ -46,6 +46,16 @@ export const settingsApi = {
   updateBilling: async (data) => {
     return apiClient.put('/settings/billing', data);
   },
+
+  // Get subscription
+  getSubscription: async () => {
+    return apiClient.get('/settings/subscription');
+  },
+
+  // Update subscription plan (no payment integration)
+  updateSubscription: async (plan) => {
+    return apiClient.put('/settings/subscription', { plan });
+  },
 };
 
 export default settingsApi;

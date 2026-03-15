@@ -260,7 +260,7 @@ export const createMenuItem = asyncHandler(async (req, res) => {
   const { restaurantId, categoryId } = req.params;
 
   // Verify access (owner or admin)
-  await verifyRestaurantAccess(restaurantId, req.user);
+  const restaurant = await verifyRestaurantAccess(restaurantId, req.user);
 
   // Verify category exists
   const category = await Category.findOne({
@@ -271,13 +271,15 @@ export const createMenuItem = asyncHandler(async (req, res) => {
     throw ApiError.notFound('Category not found');
   }
 
-  // Check user's subscription limits
-  const itemCount = await MenuItem.countDocuments({ restaurant: restaurantId });
-  const user = await req.user;
-  if (itemCount >= user.subscription.features.maxMenuItems) {
-    throw ApiError.forbidden(
-      `You have reached the maximum number of menu items (${user.subscription.features.maxMenuItems}) for your plan.`
-    );
+  // Check user's subscription limits (skip for admin and super_admin)
+  const user = req.user;
+  if (user.role !== 'admin' && user.role !== 'super_admin') {
+    const itemCount = await MenuItem.countDocuments({ restaurant: restaurantId });
+    if (itemCount >= user.subscription.features.maxMenuItems) {
+      throw ApiError.forbidden(
+        `You have reached the maximum number of menu items (${user.subscription.features.maxMenuItems}) for your plan.`
+      );
+    }
   }
 
   // Get next order number

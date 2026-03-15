@@ -906,12 +906,12 @@ const OrderSuccessModal = ({ isOpen, orderData, primaryColor, onClose }) => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-3xl max-w-sm w-full p-8 text-center"
+        className="bg-white rounded-3xl max-w-sm w-full mx-4 p-8 text-center"
       >
         <motion.div
           initial={{ scale: 0 }}

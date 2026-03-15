@@ -29,7 +29,7 @@ const InvoiceModal = ({ order, restaurant, onClose }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static"
+                className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center print:p-0 print:bg-white print:static"
                 onClick={onClose}
             >
                 <motion.div
@@ -37,7 +37,7 @@ const InvoiceModal = ({ order, restaurant, onClose }) => {
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.95, opacity: 0 }}
                     onClick={(e) => e.stopPropagation()}
-                    className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:max-w-none print:max-h-none print:rounded-none"
+                    className="bg-white rounded-2xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-hidden flex flex-col print:shadow-none print:max-w-none print:max-h-none print:rounded-none"
                 >
                     {/* Header Actions - Hidden in Print */}
                     <div className="flex items-center justify-between p-4 border-b border-gray-100 print:hidden">

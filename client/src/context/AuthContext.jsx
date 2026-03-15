@@ -154,6 +154,21 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Refresh current user from API (useful after subscription changes)
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await authApi.getMe();
+      dispatch({ type: 'SET_USER', payload: response.data });
+      localStorage.setItem('user', JSON.stringify(response.data));
+      return response;
+    } catch (error) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      dispatch({ type: 'SET_USER', payload: null });
+      throw error;
+    }
+  }, []);
+
   const value = {
     ...state,
     isInitialized,
@@ -162,6 +177,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     updatePassword,
+    refreshUser,
   };
 
   return (

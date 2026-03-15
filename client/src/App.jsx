@@ -48,8 +48,20 @@ import {
   Settings,
   Orders,
   Transactions,
+  Membership,
 } from './pages/dashboard';
-import { AdminLogin, AdminDashboard, AdminUsers, AdminRestaurants, AdminRestaurantForm, AdminMenus, AdminTables, AdminOrders, AdminTransactions } from './pages/admin';
+import {
+  AdminLogin,
+  AdminDashboard,
+  AdminUsers,
+  AdminRestaurants,
+  AdminRestaurantForm,
+  AdminMenus,
+  AdminTables,
+  AdminOrders,
+  AdminTransactions,
+  AdminSettings,
+} from './pages/admin';
 import NotFound from './pages/errors/NotFound';
 
 // Layouts
@@ -98,7 +110,7 @@ function App() {
               <Route path="restaurants/:id/tables" element={<TablesManagement />} />
               <Route path="orders" element={<Orders />} />
               <Route path="qr-codes" element={<PlaceholderPage title="QR Codes" />} />
-              <Route path="membership" element={<PlaceholderPage title="Membership" />} />
+              <Route path="membership" element={<Membership />} />
               <Route path="transactions" element={<Transactions />} />
               <Route path="settings" element={<Settings />} />
             </Route>
@@ -123,7 +135,7 @@ function App() {
               <Route path="tables" element={<AdminTables />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="transactions" element={<AdminTransactions />} />
-              <Route path="settings" element={<PlaceholderPage title="Admin Settings" />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
 
             {/* 404 */}
